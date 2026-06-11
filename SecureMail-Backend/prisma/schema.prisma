@@ -1,0 +1,325 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client-js"
+}
+
+//Your Prisma schema file contains a datasource URL, which is not supported in Prisma 7. If you intend to use Prisma 6, press the button below to pin the current workspace to Prisma 6. If you want to continue using Prisma 7, you can ignore this message.
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   Int            @id @default(autoincrement())
+  email                String         @unique
+  provider             String         @default("local")
+  username             String?
+  passwordHash         String?
+  avatar               String?
+  otpCode              String?
+  otpExpires           DateTime?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  oauthId              String?
+  oauthAccessToken     String?
+  oauthRefreshToken    String?
+  isVerified           Boolean        @default(false)
+  totpSecret           String?
+  totpEnabled         Boolean        @default(false)
+  role                 Role           @default(USER)
+  bannedAt             DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime       @default(now())
+  mailBoxes            MailBox[]
+  sessions             UserSession[]
+  settings             UserSetting[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+
+  @@index([deletedAt])
+  @@index([bannedAt])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model UserSession {
+  id            Int      @id @default(autoincrement())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  userAgent     String
+  ipAddress     String
+  deviceOs      String?
+  deviceBrowser String?
+  loginAt       DateTime @default(now())
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserSetting {
+  id                   Int         @id @default(autoincrement())
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               Int         @unique
+  themeMode            ThemeMode   @default(LIGHT)
+  notificationsEnabled Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+}
+
+model MailBox {
+  id                       Int             @id @default(autoincrement())
+  user                     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                   Int
+  provider                 EmailProviders?
+  emailAddress             String?
+  displayName              String
+  isActive                 Boolean         @default(true)
+  pushNotificationsEnabled Boolean         @default(true)
+  lastSyncedAt             DateTime        @default(now())
+  createdAt                DateTime        @default(now())
+  imapConfig    ImapConfig?
+  smtpConfig    SmtpConfig?
+  oauthToken    OauthToken?
+  folders       Folder[]
+  emails        Email[]
+  notifications Notification[]
+  syncLog       SyncLog[]
+}
+
+enum EmailProviders {
+  GMAIL
+  OUTLOOK
+  CUSTOM
+}
+
+model ImapConfig {
+  id                Int          @id @default(autoincrement())
+  mailBox           MailBox      @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId         Int          @unique
+  host              String
+  port              Int
+  secure            Boolean
+  authType          ImapAuthType
+  passwordEncrypted String?
+  createdAt         DateTime     @default(now())
+}
+
+enum ImapAuthType {
+  OAUTH
+  PASSWORD
+}
+
+model SmtpConfig {
+  id                 Int          @id @default(autoincrement())
+  mailBox            MailBox      @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId          Int          @unique
+  host               String
+  port               Int
+  secure             Boolean
+  authType           SmtpAuthType
+  passwordEncrypted  String?       @map("password_encrypted")
+  createdAt          DateTime     @default(now())
+}
+
+enum SmtpAuthType {
+  OAUTH
+  PASSWORD
+}
+
+model OauthToken {
+  id                    Int      @id @default(autoincrement())
+  mailBox               MailBox  @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId             Int      @unique
+  provider              String
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  expiresAt             DateTime
+  scope                 String
+  createdAt             DateTime @default(now())
+}
+
+model Folder {
+  id        Int        @id @default(autoincrement())
+  mailBox   MailBox    @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId Int
+  name      String
+  type      FolderType
+  remoteId  String
+  emails    Email[]
+  createdAt DateTime   @default(now())
+
+  @@index([mailBoxId])
+  @@index([remoteId])
+}
+
+enum FolderType {
+  INBOX
+  SENT
+  SPAM
+  PHISHING
+  TRASH
+  CUSTOM
+  MALWARE
+}
+
+model Email {
+  id              Int             @id @default(autoincrement())
+  mailBox         MailBox         @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId       Int
+  folder          Folder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  folderId        Int
+  messageId       String
+  subject         String          @default("")
+  fromAddr        String          @map("from_addr")
+  fromName        String?         @map("from_name")
+  toAddr          Json            @map("to_addr")
+  ccAddr          Json?           @map("cc_addr")
+  bccAddr         Json?           @map("bcc_addr")
+  bodyText        String?         @map("body_text")
+  bodyHtml        String?         @map("body_html")
+  isRead          Boolean         @default(false)
+  isFlagged       Boolean         @default(false)
+  isSpam          Boolean         @default(false)
+  isPhishing      Boolean         @default(false) @map("is_phishing")
+  spamScore       Int             @default(0) @map("spam_score")
+  phishingScore   Int             @default(0) @map("phishing_score")
+  malwareScore    Int?            @map("malware_score")
+  malwareVerdict  String?         @map("malware_verdict")
+  malwareSeverity String?         @map("malware_severity")
+  aiReport        Json?           @map("ai_report")
+  analysisStatus  AnalysisStatus  @default(PENDING) @map("analysis_status")
+  inReplyTo       String?         @map("in_reply_to")
+  references      String?         @map("references")
+  receivedAt      DateTime
+  createdAt       DateTime        @default(now())
+  emailFlag       EmailFlag?
+  attachments     Attachment[]
+  notifications   Notification[]
+
+  @@unique([mailBoxId, folderId, messageId])
+  @@index([mailBoxId])
+  @@index([folderId])
+  @@index([receivedAt])
+  @@index([messageId])
+  // ARCH FIX: index for Rule 13 first-contact query performance
+  @@index([mailBoxId, fromAddr])
+}
+
+enum AnalysisStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model EmailFlag {
+  id        Int           @id @default(autoincrement())
+  email     Email         @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId   Int           @unique
+  type      EmailFlagType
+  createdAt DateTime      @default(now())
+}
+
+enum EmailFlagType {
+  SEEN
+  FLAGGED
+  ANSWERED
+}
+
+model Attachment {
+  id          Int      @id @default(autoincrement())
+  email       Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId     Int
+  mimeType    String   @map("mime_type")
+  filename    String?
+  size        Int
+  storagePath String   @map("storage_path")
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  mailBox   MailBox?         @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId Int?
+  email     Email?           @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId   Int?
+  createdAt DateTime         @default(now())
+
+  @@index([mailBoxId])
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  NEW_LOGIN_DETECTED
+  LOW_MAILBOX_SPACE
+  PASSWORD_CHANGED
+  WEEKLY_SECURITY_REPORT
+  NEW_EMAIL_RECEIVED
+  PHISHING_DETECTED
+  MALWARE_DETECTED
+  FAILED_SYNC
+}
+
+model SyncLog {
+  id           Int        @id @default(autoincrement())
+  mailBox      MailBox    @relation(fields: [mailBoxId], references: [id], onDelete: Cascade)
+  mailBoxId    Int
+  status       SyncStatus
+  errorMessage String?
+  syncedAt     DateTime
+
+  @@index([status])
+  @@index([syncedAt])
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+}
+
+model AuditLog {
+  id         Int        @id @default(autoincrement())
+  admin      User       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  adminId    Int
+  action     String
+  targetType AuditTargetType
+  targetId   Int?
+  details    Json?
+  createdAt  DateTime   @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+}
+
+enum AuditTargetType {
+  USER
+  MAILBOX
+  EMAIL
+  NOTIFICATION
+}
