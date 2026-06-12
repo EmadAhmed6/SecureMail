@@ -24,7 +24,7 @@ import { useRouter, usePathname, useParams } from "next/navigation";
 import {
   useReadEmail,
   useStarEmail,
-  useDeleteEmailWithUndo,
+  useDeleteEmail,
 } from "@/APIs/hooks/emails";
 import { ActionButton } from "@/_components/shared/ActionButton";
 
@@ -59,7 +59,7 @@ export const MailRow = React.memo(
 
     const readMutation = useReadEmail(mailboxId);
     const starMutation = useStarEmail(mailboxId);
-    const deleteWithUndo = useDeleteEmailWithUndo(
+    const deleteMutation = useDeleteEmail(
       mailboxId,
       activeFolder as EmailFolder,
     );
@@ -456,7 +456,7 @@ export const MailRow = React.memo(
                 }
                 tooltipSide="top"
                 disabled={activeFolder === "trash"}
-                onClick={() => deleteWithUndo(String(email.id))}
+                onClick={() => deleteMutation.mutate(String(email.id))}
                 icon={
                   <Icons.Delete className="w-4 h-4 text-primary-600 hover:text-error-500 transition-colors" />
                 }
@@ -542,7 +542,7 @@ export const MailRow = React.memo(
                 <ActionButton
                   label="Delete"
                   tooltipSide="top"
-                  onClick={() => deleteWithUndo(String(email.id))}
+                  onClick={() => deleteMutation.mutate(String(email.id))}
                   icon={<Icons.Delete className="w-3.5 h-3.5" />}
                   className="h-7 w-7 rounded-full text-primary-400 hover:text-error-500 hover:bg-error-50"
                 />
