@@ -72,6 +72,17 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
   const deleteMutation = useDeleteEmail(mailboxId, activeFolder ?? undefined);
   const scanMutation = useScanEmail(mailboxId);
   const setComposeOpen = useMailStore((s) => s.setComposeOpen);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 640) {
+        setIsMoreOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const mutateRead = readMutation.mutate;
 
@@ -163,9 +174,15 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
         to: email.fromAddr,
         subject: `Re: ${email.subject}`,
         fromName: email.fromName,
+        fromAddr: email.fromAddr,
         receivedAt: email.receivedAt,
         emailId: String(email.id),
         toAddr: email.toAddr,
+        originalHtml: email.bodyHtml
+          ? processHtmlBody(email.bodyHtml)
+          : undefined,
+        originalText: email.bodyText,
+        attachments: email.attachments,
       },
     });
   };
@@ -185,6 +202,7 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
           : undefined,
         originalText: email.bodyText,
         toAddr: email.toAddr,
+        attachments: email.attachments,
       },
     });
   };
@@ -399,11 +417,11 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
               label="Reply"
               onClick={handleReply}
             />
-            {/* <ActionButton
+            <ActionButton
               icon={<Forward className="size-4 text-primary" />}
               label="Forward"
               onClick={handleForward}
-            /> */}
+            />
             <ActionButton
               icon={
                 email.isRead ? (
@@ -426,7 +444,7 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
 
           {/* Mobile Actions Dropdown */}
           <div className="flex sm:hidden">
-            <DropdownMenu>
+            <DropdownMenu open={isMoreOpen} onOpenChange={setIsMoreOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -472,7 +490,19 @@ export const MailDetails = ({ emailId }: { emailId: string }) => {
                     {email.isRead ? "Mark as Unread" : "Mark as Read"}
                   </Text>
                 </DropdownMenuItem>
-
+                <DropdownMenuItem
+                  onClick={handleForward}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:text-primary transition-colors data-highlighted:bg-background"
+                >
+                  <Forward className="w-4 h-4 text-primary-400 group-hover:text-primary" />
+                  <Text
+                    as="span"
+                    font="medium"
+                    className="text-primary-400 group-hover:text-primary flex-1 text-sm"
+                  >
+                    Forward
+                  </Text>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleDelete}
                   className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:text-error-500 transition-colors data-highlighted:bg-error-50/50"

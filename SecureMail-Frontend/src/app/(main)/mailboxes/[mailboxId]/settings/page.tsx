@@ -126,11 +126,11 @@ const MailboxSettings = () => {
           </Text>
           <div className="border-b border-primary-100 pb-10 space-y-6">
             <Input
-              label="Display Name"
+              label="Mailbox Name"
               {...register("mailboxName", {
                 onChange: () => clearErrors("mailboxName"),
               })}
-              placeholder={"displayName"}
+              placeholder={"Mailbox Name"}
               type="text"
               className="w-full md:w-[400px]"
               error={errors.mailboxName?.message}

@@ -145,9 +145,15 @@ export const MailRow = React.memo(
           onDragOver(index);
         }}
         onDragEnd={onDragEnd}
-        onClick={() => router.push(`${pathname}/${String(email.id)}`)}
+        onClick={() => {
+          if (String(email.id).startsWith("temp-")) return;
+          router.push(`${pathname}/${String(email.id)}`);
+        }}
         className={cn(
-          "group flex items-center gap-0 border-b border-primary-50 hover:bg-primary-50/70 transition-all duration-150 cursor-pointer relative z-0 hover:z-10",
+          "group flex items-center gap-0 border-b border-primary-50 transition-all duration-150 relative z-0 hover:z-10",
+          String(email.id).startsWith("temp-")
+            ? "opacity-65 pointer-events-none cursor-not-allowed select-none animate-pulse"
+            : "hover:bg-primary-50/70 cursor-pointer",
           !email.isRead ? "bg-background" : "bg-transparent",
           isSelected && "bg-primary-50/70",
         )}
@@ -187,6 +193,7 @@ export const MailRow = React.memo(
               icon={
                 <Icons.Star
                   active={isStarred}
+                  disableGroupHover
                   className={cn(
                     "w-4 h-4 transition-colors",
                     isStarred
@@ -458,7 +465,10 @@ export const MailRow = React.memo(
                 disabled={activeFolder === "trash"}
                 onClick={() => deleteMutation.mutate(String(email.id))}
                 icon={
-                  <Icons.Delete className="w-4 h-4 text-primary-600 hover:text-error-500 transition-colors" />
+                  <Icons.Delete
+                    disableGroupHover
+                    className="w-4 h-4 text-primary-600 hover:text-error-500 transition-colors"
+                  />
                 }
                 className="h-7 w-7 rounded-full"
               />
@@ -501,15 +511,16 @@ export const MailRow = React.memo(
                 icon={
                   <Icons.Star
                     active={isStarred}
-                    className="w-3.5 h-3.5 transition-colors"
+                    disableGroupHover
+                    className={cn(
+                      "w-3.5 h-3.5 transition-colors",
+                      isStarred
+                        ? "text-warning-500"
+                        : "text-primary-400 hover:text-warning-500",
+                    )}
                   />
                 }
-                className={cn(
-                  "h-7 w-7 rounded-full",
-                  isStarred
-                    ? "text-warning-500 bg-warning-50 hover:bg-warning-100"
-                    : "text-primary-400 hover:text-warning-500 hover:bg-warning-50",
-                )}
+                className="h-7 w-7 rounded-full hover:bg-primary-50"
               />
 
               {/* Read toggle */}
@@ -543,8 +554,8 @@ export const MailRow = React.memo(
                   label="Delete"
                   tooltipSide="top"
                   onClick={() => deleteMutation.mutate(String(email.id))}
-                  icon={<Icons.Delete className="w-3.5 h-3.5" />}
-                  className="h-7 w-7 rounded-full text-primary-400 hover:text-error-500 hover:bg-error-50"
+                  icon={<Icons.Delete disableGroupHover className="w-3.5 h-3.5" />}
+                  className="h-7 w-7 rounded-full text-primary hover:text-error-500 hover:bg-error-50"
                 />
               )}
             </div>
